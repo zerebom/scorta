@@ -2,3 +2,4 @@
 .python-version
 .venv/**
 sandbox/**
+**/__pycache__/**

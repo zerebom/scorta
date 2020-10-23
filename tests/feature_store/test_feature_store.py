@@ -18,7 +18,7 @@ def save_dir():
     pass
 
 
-class BuildFeature(BaseFeature):
+class ImplFeat(BaseFeature):
     input_dir = Path('./input')
     output_dir = Path('./feature')
 
@@ -27,7 +27,7 @@ class BuildFeature(BaseFeature):
         return re.sub("([A-Z])", lambda x: "_" + x.group(1).lower(), camel)
 
     def __init__(self, debug=True, replace=True, input_dir=None, output_dir=None):
-        super(BuildFeature, self).__init__(debug, replace, input_dir)
+        super(ImplFeat, self).__init__(debug, replace, input_dir)
 
         self.debug = debug
         self.name = self.camel2snake(self.__class__.__name__)
@@ -88,7 +88,7 @@ def test_load_features():
 
 def test_make_features(save_dir):
 
-    class SumFeature(BuildFeature):
+    class SumFeature(ImplFeat):
         def make_features(self, train, test, card):
             self.train["col_sum"] = train["a"] + train["a"]
             self.test["col_sum"] = test["b"] + test["a"]

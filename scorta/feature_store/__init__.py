@@ -1,0 +1,1 @@
+from scorta.feature_store.feature_store import BaseFeature

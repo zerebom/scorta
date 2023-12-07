@@ -2,23 +2,29 @@
 name = "scorta"
 version = "0.1.0"
 description = ""
-authors = ["zerebom <ice.choco.pudding.kokoro@gmail.com>"]
+authors = ["zerebom"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-lightgbm = "^3.0.0"
-pandas = "^1.1.3"
-numpy = "^1.19.2"
-matplotlib = "^3.3.2"
-xgboost = "^1.2.1"
-catboost = "^0.24.2"
-tqdm = "^4.50.2"
-pytest = "^6.1.1"
-hydra-core = "^1.0.3"
+python = "^3.11"
+numpy = "^1.26.2"
+polars = "^0.19.19"
+pandas = "^2.1.3"
+pytest = "^7.4.3"
+xgboost = "^2.0.2"
+catboost = "^1.2.2"
+lightgbm = "^4.1.0"
+seaborn = "^0.13.0"
+matplotlib = "^3.8.2"
+scikit-learn = "^1.3.2"
+loguru = "^0.7.2"
+hydra-core = "^1.3.2"
+wandb = "^0.16.1"
 
-[tool.poetry.dev-dependencies]
-autopep8 = "^1.5.4"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.1.7"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

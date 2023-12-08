@@ -3,3 +3,9 @@
 .venv/**
 sandbox/**
 **/__pycache__/**
+.ruff_cache
+.mypy_cache
+.pytest_cache
+.vscode
+catboost_info/
+monkeytype.sqlite3

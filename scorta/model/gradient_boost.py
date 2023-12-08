@@ -83,7 +83,7 @@ class GBTWrapper:
             dtest = xgb.DMatrix(test_X)
             return self.models[model_idx].predict(dtest)  # type: ignore
 
-    def predict(self, test_X: pd.DataFrame, model_idx: int) -> list[float]:
+    def predict(self, test_X: pd.DataFrame, model_idx: int) -> Any | np.ndarray[Any, Any]:
         if self.gbt_type == "cat":
             test_pool = Pool(test_X)
             return self.models[model_idx].predict(test_pool)

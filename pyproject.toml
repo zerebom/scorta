@@ -40,7 +40,7 @@ exclude = [
     ".git",
 ]
 
-line-length = 120
+line-length = 150
 indent-width = 4
 
 

@@ -2,7 +2,7 @@ import inspect
 import os
 import sys
 import time
-from functools import wraps
+from functools import wraps, partial
 from typing import Any, Callable, TypeVar
 
 from loguru import logger

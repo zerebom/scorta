@@ -27,7 +27,7 @@ logger.add(
 )
 
 
-def timing_logger(func=None, *, log_arg: str | None = None):
+def timing_logger(func: Any = None, *, log_arg: str | None = None) -> Any:
     """
     各メソッドにどれくらい時間がかかったわかるようにするデコレーター
     log_arg を指定すると、引数の値もログに出力する
@@ -36,7 +36,7 @@ def timing_logger(func=None, *, log_arg: str | None = None):
         return partial(timing_logger, log_arg=log_arg)  # type: ignore
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         pid = str(os.getpid())[-5:]
         start_time = time.perf_counter()
         frame = inspect.stack()[1]

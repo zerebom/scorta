@@ -72,6 +72,7 @@ max-complexity = 10
 ruff = "^0.1.7"
 mypy = "^1.7.1"
 monkeytype = "^23.3.0"
+ipykernel = "^6.27.1"
 
 [build-system]
 requires = ["poetry-core"]

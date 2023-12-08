@@ -1,0 +1,40 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install pipx and poetry
+      run: |
+        pipx install poetry
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: poetry
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Run ruff
+      run: |
+        poetry run ruff .
+
+    - name: Run mypy
+      run: |
+        poetry run mypy .
+
+    - name: Run pytest
+      run: |
+        poetry run pytest -v

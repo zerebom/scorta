@@ -3,17 +3,14 @@ Created on Wed May  9 15:28:58 2018
 @author: kazuki.onodera
 """
 
-from typing import Callable
 from dataclasses import dataclass
+from typing import Callable
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import log_loss
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, log_loss
 
 
 @dataclass
@@ -61,10 +58,7 @@ def multiclass_metrics(y_true: np.ndarray, y_pred: np.ndarray, pred_label: str |
         Metric(name="accuracy", is_binary=True, method=accuracy_score),
         Metric(name="micro_f1_score", is_binary=True, method=lambda *x: f1_score(*x, average="micro")),
         Metric(name="macro_f1_score", is_binary=True, method=lambda *x: f1_score(*x, average="macro")),
-        *[
-            Metric(name="top_n_accuracy@{}".format(n), is_binary=False, method=TopNAccuracyScore(n=n))
-            for n in [2, 3, 4, 5]
-        ],
+        *[Metric(name="top_n_accuracy@{}".format(n), is_binary=False, method=TopNAccuracyScore(n=n)) for n in [2, 3, 4, 5]],
     ]
 
     score = {}
@@ -105,12 +99,7 @@ def visualize_importance(feature_importances: list[int], feat_train_df: pd.DataF
         _df["fold"] = i + 1
         feature_importance_df = pd.concat([feature_importance_df, _df], axis=0, ignore_index=True)
 
-    order = (
-        feature_importance_df.groupby("column")
-        .sum()[["feature_importance"]]
-        .sort_values("feature_importance", ascending=False)
-        .index[:50]
-    )
+    order = feature_importance_df.groupby("column").sum()[["feature_importance"]].sort_values("feature_importance", ascending=False).index[:50]
 
     fig, ax = plt.subplots(figsize=(12, max(4, len(order) * 0.2)))
     sns.boxenplot(data=feature_importance_df, y="column", x="feature_importance", order=order, ax=ax, palette="viridis")
@@ -120,6 +109,7 @@ def visualize_importance(feature_importances: list[int], feat_train_df: pd.DataF
 
 
 def df_info(target_df: pd.DataFrame, topN: int = 10) -> pd.DataFrame:
+    print("heeeeeeeeee")
     max_row = target_df.shape[0]
     print(f"Shape: {target_df.shape}")
 
@@ -135,9 +125,9 @@ def df_info(target_df: pd.DataFrame, topN: int = 10) -> pd.DataFrame:
     df["Std"] = target_df.std(numeric_only=True)
 
     # top 10 values
-    df[f"top{topN} val"] = 0
-    df[f"top{topN} cnt"] = 0
-    df[f"top{topN} raito"] = 0
+    df[f"top{topN} val"] = "0"
+    df[f"top{topN} cnt"] = "0"
+    df[f"top{topN} raito"] = "0"
     for c in df.index:
         vc = target_df[c].value_counts().head(topN)
         val = list(vc.index)
@@ -154,9 +144,7 @@ def top_categories(df: pd.DataFrame, category_feature: list[str], topN: int = 30
     return df[category_feature].value_counts().head(topN).index
 
 
-def count_categories(
-    df: pd.DataFrame, category_features: list[str], topN: int = 30, sort: str = "freq", df2: pd.DataFrame | None = None
-) -> None:
+def count_categories(df: pd.DataFrame, category_features: list[str], topN: int = 30, sort: str = "freq", df2: pd.DataFrame | None = None) -> None:
     for c in category_features:
         target_value = df[c].value_counts().head(topN).index
         if sort == "freq":
@@ -184,9 +172,7 @@ def count_categories(
     return
 
 
-def hist_continuous(
-    df: pd.DataFrame, continuous_features: list[str], bins: int = 30, df2: pd.DataFrame | None = None
-) -> None:
+def hist_continuous(df: pd.DataFrame, continuous_features: list[str], bins: int = 30, df2: pd.DataFrame | None = None) -> None:
     for c in continuous_features:
         if df2 is not None:
             plt.subplot(1, 2, 1)

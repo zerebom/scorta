@@ -9,3 +9,5 @@ sandbox/**
 .vscode
 catboost_info/
 monkeytype.sqlite3
+*.csv
+*.parquet

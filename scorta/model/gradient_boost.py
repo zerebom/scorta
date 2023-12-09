@@ -1,6 +1,6 @@
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
-from lightgbm import LGBMClassifier
+from lightgbm import LGBMClassifier, LGBMRegressor
 from catboost import CatBoost
 from catboost import Pool
 import xgboost as xgb
@@ -8,18 +8,19 @@ import pandas as pd
 from typing import Any, Callable, TypeAlias, Literal
 from lightgbm.callback import early_stopping
 
-
 from xgboost.core import Booster
 
 Params = dict[str, Any]
 
 GBDTBooster: TypeAlias = CatBoost | LGBMClassifier | Booster
 GBDType: TypeAlias = Literal["cat", "xgb", "lgb"]
+TaskType: TypeAlias = Literal["bin", "reg", "multi", "rank"]
 
 
 class GBTWrapper:
-    def __init__(self, gbt_type: GBDType = "cat"):
+    def __init__(self, gbt_type: GBDType = "cat", task_type: TaskType = "bin"):
         self.gbt_type = gbt_type
+        self.task_type = task_type
 
     def fit(
         self,
@@ -30,13 +31,13 @@ class GBTWrapper:
         callback: Callable | None = None,
     ) -> tuple[GBDTBooster, np.ndarray]:
         if self.gbt_type == "cat":
-            self.models, self.oof = fit_catboost(X, y, params, verbose, callback)
+            self.models, self.oof = fit_catboost(X, y, params, verbose, callback, self.task_type)
 
         elif self.gbt_type == "lgb":
-            self.models, self.oof = fit_lgbm(X, y, params, verbose, callback)
+            self.models, self.oof = fit_lgbm(X, y, params, verbose, callback, self.task_type)
 
         elif self.gbt_type == "xgb":
-            self.models, self.oof = fit_xgb(X, y, params, verbose, callback)
+            self.models, self.oof = fit_xgb(X, y, params, verbose, callback, self.task_type)
 
         return self.models, self.oof
 
@@ -82,9 +83,26 @@ class GBTWrapper:
             dtest = xgb.DMatrix(test_X)
             return self.models[model_idx].predict(dtest)  # type: ignore
 
+    def predict(self, test_X: pd.DataFrame, model_idx: int) -> Any | np.ndarray[Any, Any]:
+        if self.gbt_type == "cat":
+            test_pool = Pool(test_X)
+            return self.models[model_idx].predict(test_pool)
+
+        if self.gbt_type == "lgb":
+            return self.models[model_idx].predict(test_X)
+
+        if self.gbt_type == "xgb":
+            dtest = xgb.DMatrix(test_X)
+            return self.models[model_idx].predict(dtest)
+
 
 def fit_xgb(
-    X: np.ndarray, y: np.ndarray, params: dict | None = None, verbose: int = 50, callback: Callable | None = None
+    X: np.ndarray,
+    y: np.ndarray,
+    params: dict | None = None,
+    verbose: int = 50,
+    callback: Callable | None = None,
+    task_type: TaskType = "bin",
 ) -> tuple[list[GBDTBooster], np.ndarray]:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
@@ -128,7 +146,12 @@ def fit_xgb(
 
 
 def fit_lgbm(
-    X: np.ndarray, y: np.ndarray, params: dict | None = None, verbose: int = 50, callback: Callable | None = None
+    X: np.ndarray,
+    y: np.ndarray,
+    params: dict | None = None,
+    verbose: int = 50,
+    callback: Callable | None = None,
+    task_type: TaskType = "bin",
 ) -> tuple[list[GBDTBooster], np.ndarray]:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
@@ -136,7 +159,11 @@ def fit_lgbm(
         params = {"early_stopping_rounds": 1}
 
     n_classes = len(np.unique(y))
-    oof = np.zeros(shape=(len(y), n_classes), dtype=np.float32)
+
+    if task_type == "bin":
+        oof = np.zeros(shape=(len(y), n_classes), dtype=np.float32)
+    else:
+        oof = np.zeros(shape=(len(y)), dtype=np.float32)
     models = []
 
     copy_X = np.copy(X)
@@ -150,23 +177,42 @@ def fit_lgbm(
         X_tr, y_tr = X[idx_tr], y[idx_tr]
         X_val, y_val = X[idx_val], y[idx_val]
 
-        clf = LGBMClassifier(**params)
-        clf.fit(
-            X_tr,
-            y_tr,
-            eval_set=[(X_val, y_val)],
-            callbacks=[early_stopping(params["early_stopping_rounds"], verbose=verbose)],  # type: ignore
-        )
+        if task_type == "bin":
+            clf = LGBMClassifier(**params)
+            clf.fit(
+                X_tr,
+                y_tr,
+                eval_set=[(X_val, y_val)],
+                callbacks=[early_stopping(params["early_stopping_rounds"], verbose=verbose)],  # type: ignore
+            )
 
-        pred_i = clf.predict_proba(X_val)
-        oof[idx_val] = pred_i
+            pred_i = clf.predict_proba(X_val)
+            oof[idx_val] = pred_i
+
+        elif task_type == "reg":
+            clf = LGBMRegressor(**params)
+            clf.fit(
+                X_tr,
+                y_tr,
+                eval_set=[(X_val, y_val)],
+                callbacks=[early_stopping(params["early_stopping_rounds"], verbose=verbose)],  # type: ignore
+            )
+
+            pred_i = clf.predict(X_val)
+            oof[idx_val] = pred_i
+
         models.append(clf)
 
     return models, oof  # type: ignore
 
 
 def fit_catboost(
-    X: pd.DataFrame, y: pd.DataFrame, params: dict[str, Any] | None, verbose: int = 50, callback: Callable | None = None
+    X: pd.DataFrame,
+    y: pd.DataFrame,
+    params: dict[str, Any] | None,
+    verbose: int = 50,
+    callback: Callable | None = None,
+    task_type: TaskType = "bin",
 ) -> tuple[list[GBDTBooster], np.ndarray]:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 

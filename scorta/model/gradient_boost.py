@@ -1,13 +1,12 @@
-from sklearn.model_selection import StratifiedKFold
-import numpy as np
-from lightgbm import LGBMClassifier, LGBMRegressor
-from catboost import CatBoost
-from catboost import Pool
-import xgboost as xgb
-import pandas as pd
-from typing import Any, Callable, TypeAlias, Literal
-from lightgbm.callback import early_stopping
+from typing import Any, Callable, Literal, TypeAlias
 
+import numpy as np
+import pandas as pd
+import xgboost as xgb
+from catboost import CatBoost, Pool
+from lightgbm import LGBMClassifier, LGBMRegressor
+from lightgbm.callback import early_stopping
+from sklearn.model_selection import StratifiedKFold
 from xgboost.core import Booster
 
 Params = dict[str, Any]
@@ -29,15 +28,16 @@ class GBTWrapper:
         params: dict | None = None,
         verbose: int = 50,
         callback: Callable | None = None,
+        cv: Callable | None = None,
     ) -> tuple[GBDTBooster, np.ndarray]:
         if self.gbt_type == "cat":
-            self.models, self.oof = fit_catboost(X, y, params, verbose, callback, self.task_type)
+            self.models, self.oof = fit_catboost(X, y, params, verbose, callback, self.task_type, cv)
 
         elif self.gbt_type == "lgb":
-            self.models, self.oof = fit_lgbm(X, y, params, verbose, callback, self.task_type)
+            self.models, self.oof = fit_lgbm(X, y, params, verbose, callback, self.task_type, cv)
 
         elif self.gbt_type == "xgb":
-            self.models, self.oof = fit_xgb(X, y, params, verbose, callback, self.task_type)
+            self.models, self.oof = fit_xgb(X, y, params, verbose, callback, self.task_type, cv)
 
         return self.models, self.oof
 
@@ -103,8 +103,10 @@ def fit_xgb(
     verbose: int = 50,
     callback: Callable | None = None,
     task_type: TaskType = "bin",
+    cv: Callable | None = None,
 ) -> tuple[list[GBDTBooster], np.ndarray]:
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    if cv is None:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     if params is None:
         # https://xgboost.readthedocs.io/en/stable/parameter.html
@@ -116,7 +118,7 @@ def fit_xgb(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:
@@ -152,8 +154,10 @@ def fit_lgbm(
     verbose: int = 50,
     callback: Callable | None = None,
     task_type: TaskType = "bin",
+    cv: Callable | None = None,
 ) -> tuple[list[GBDTBooster], np.ndarray]:
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    if cv is None:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     if params is None:
         params = {"early_stopping_rounds": 1}
@@ -167,7 +171,7 @@ def fit_lgbm(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:
@@ -213,8 +217,10 @@ def fit_catboost(
     verbose: int = 50,
     callback: Callable | None = None,
     task_type: TaskType = "bin",
+    cv: Callable | None = None,
 ) -> tuple[list[GBDTBooster], np.ndarray]:
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    if cv is None:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     # parameter が指定されないときには空の dict で置き換えします
     # https://catboost.ai/en/docs/references/training-parameters/
@@ -226,7 +232,7 @@ def fit_catboost(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:

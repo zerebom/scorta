@@ -74,17 +74,20 @@ class Candidate(ABC):
         suffix: str | None = None,
         target_df: pl.DataFrame | None = None,
         evaluate_topks: list[int] = [1, 5, 10, 50, 100],
+        mode: Literal["train", "test"] | None = None,
     ):
         self.class_name = self.__class__.__name__
+        self.file_name = self.__class__.__name__
+        self.mode = mode
         if suffix is not None:
-            self.class_name += f"_{suffix}"
+            self.file_name += f"_{suffix}"
 
         self.user_col = user_col
         self.item_col = item_col
         self.target_values = [1]
 
         self.output_cols = [user_col, item_col, "rank", "score"]
-        self.output_path = Path(output_dir) / f"{self.class_name}.parquet"
+        self.output_path = Path(output_dir) / f"{self.file_name}.parquet"
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         self.evaluator = Evaluator(target_df, user_col=user_col, item_col=item_col, evaluate_topks=evaluate_topks)

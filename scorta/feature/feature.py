@@ -15,10 +15,14 @@ class Feature(ABC):
         item_col: str = "item_id",
         key_cols: list[str] = ["user_id", "item_id"],
         suffix: str | None = None,
+        mode: Literal["train", "test"] | None = None,
     ):
         self.class_name = self.__class__.__name__
         if suffix is not None:
             self.class_name = f"{self.class_name}_{suffix}"
+
+        if mode is not None:
+            self.class_name = f"{self.class_name}_{mode}"
 
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -29,6 +33,7 @@ class Feature(ABC):
         self.item_col = item_col
         self.key_cols = key_cols
         self.suffix = suffix
+        self.mode = mode
 
     @abstractmethod
     def fit(self) -> pl.DataFrame:

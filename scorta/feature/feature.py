@@ -94,7 +94,7 @@ class FeatureMerger(Feature):
         self.features = features
 
     def fit(self) -> pl.DataFrame:  # just alias
-        return self.merge()
+        return pl.DataFrame()
 
     def merge(self, df: pl.DataFrame) -> pl.DataFrame:
         for f in tqdm(self.features):

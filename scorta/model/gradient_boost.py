@@ -118,7 +118,7 @@ def fit_xgb(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:
@@ -171,7 +171,7 @@ def fit_lgbm(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:
@@ -232,7 +232,7 @@ def fit_catboost(
     models = []
 
     copy_X = np.copy(X)
-    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):
+    for fold_idx, (idx_tr, idx_val) in enumerate(cv.split(X, y)):  # type: ignore
         X = np.copy(copy_X)
 
         if callback:

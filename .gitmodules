@@ -1,0 +1,3 @@
+[submodule "samples/atma-16"]
+	path = samples/atma-16
+	url = https://github.com/zerebom/atma-16.git

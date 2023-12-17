@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
+import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
@@ -28,41 +29,39 @@ class Evaluator:
         user_col: str = "user_id",
         item_col: str = "item_id",
         evaluate_topks: list[int] = [1, 5, 10, 50, 100],
-        target_values: list[int] = [1],
+        target_value: int = 1,
     ):
         self.evaluate_topks = evaluate_topks
         self.target_df = target_df
         self.user_col = user_col
         self.item_col = item_col
-        self.target_values = target_values
+        self.target_value = target_value
 
-    def evaluate(self, cand_df: pl.DataFrame, cg_name: str) -> dict[int, dict[str, Any]]:
+    def evaluate(self, cand_df: pl.DataFrame, cg_name: str) -> pd.DataFrame:
         summary_dic = {}
         for k in self.evaluate_topks:
             eval_dic: dict[int, dict[str, float]] = {}
             k_cand_df = cand_df.filter(pl.col("rank") <= k)
 
             if self.target_df is not None:
-                for target in self.target_values:
-                    eval_dic[target] = {}
-                    precision, recall, f1 = calc_candidate_metric(self.target_df, cand_df, k, target, [self.user_col, self.item_col])
-                    eval_dic[target][f"precision@{k}"] = precision
-                    eval_dic[target][f"recall@{k}"] = recall
-                    eval_dic[target][f"f1@{k}"] = f1
+                eval_dic = {}
+                precision, recall, f1 = calc_candidate_metric(self.target_df, cand_df, k, self.target_value, [self.user_col, self.item_col])
+                eval_dic["precision"] = precision
+                eval_dic["recall"] = recall
+                eval_dic["f1"] = f1
 
             unique_user_cnt = k_cand_df[self.user_col].n_unique()
             unique_item_cnt = k_cand_df[self.item_col].n_unique()
             pair_cnt = len(k_cand_df)
 
-            summary_dic[k] = {
-                "eval_time": datetime.now().strftime("%Y/%m/%d/%H:%M:%S"),
-                "cg_name": cg_name,
+            key = f"{cg_name}_{k}"
+            summary_dic[key] = {
                 "pair_cnt": pair_cnt,
                 "unique_user_cnt": unique_user_cnt,
                 "unique_item_cnt": unique_item_cnt,
-                "eval_dic": eval_dic,
             }
-        return summary_dic
+            summary_dic[key] = summary_dic[key] | eval_dic
+        return pd.DataFrame(summary_dic).T.reset_index()
 
 
 class Candidate(ABC):
@@ -73,7 +72,7 @@ class Candidate(ABC):
         item_col: str = "item_id",
         suffix: str | None = None,
         target_df: pl.DataFrame | None = None,
-        evaluate_topks: list[int] = [1, 5, 10, 50, 100],
+        evaluate_topks: list[int] = [10, 100],
         mode: Literal["train", "test"] | None = None,
     ):
         self.class_name = self.__class__.__name__

@@ -253,3 +253,115 @@ def fit_catboost(
         models.append(clf)
 
     return models, oof
+
+
+## ↑ OLD CODES
+class GBDT:
+    def __init__(
+        self,
+        gbdt_type: GBDType = "cat",
+        task_type: TaskType = "bin",
+        model_params: dict[str, Any] | None = None,
+        train_params: dict[str, Any] | None = None,
+        cv: Callable | None = None,
+        callbacks: list[Callable] | None = None,
+        **kwargs: Any,
+    ):
+        self.gbt_type = gbdt_type
+        self.task_type = task_type
+        self.cv = cv
+
+        if self.cv is None:
+            self.cv = KFold(n_splits=5, shuffle=True, random_state=42)
+
+        self.model_params = model_params
+        self.train_params = train_params
+        self.callbacks = callbacks
+        self.kwargs = kwargs
+
+
+class LGB(GBDT):
+    """
+    ex. callbacks:
+        callbacks=[
+            lgb.early_stopping(stopping_rounds=10, verbose=True),
+            lgb.log_evaluation(10),
+        ],
+    ex. train_params: {"num_boost_round": 10000}
+    """
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        n_classes = len(np.unique(y))
+        self.models = []
+        match self.task_type:
+            case "bin" | "multi":
+                self.model = LGBMClassifier(**self.model_params)
+                oof = np.zeros(shape=(len(y), n_classes), dtype=np.float32)
+            case "reg":
+                self.model = LGBMRegressor(**self.model_params)
+                oof = np.zeros(shape=(len(y)), dtype=np.float32)
+            case "rank":
+                self.model = LGBMRanker(**self.model_params)
+                oof = np.zeros(shape=(len(y)), dtype=np.float32)
+
+        for idx_tr, idx_val in cv.split(X, y):  # type: ignore
+            X_tr, y_tr = X[idx_tr], y[idx_tr]
+            X_val, y_val = X[idx_val], y[idx_val]
+
+            self.model.fit(
+                X_tr,
+                y_tr,
+                eval_set=[(X_val, y_val)],
+                callbacks=self.callbacks,  # type: ignore
+            )
+
+            oof[idx_val] = self.model.predict_proba(X_val) if self.task_type in ("bin", "multi") else self.model.predict(X_val)
+            self.models.append(self.model)
+        return self.models, oof
+
+    def predict(self, X: np.ndarray):
+        return self.model.predict(X)
+
+    def feature_importance(self):
+        return [model.feature_importances_ for model in self.models]
+
+
+class CAT(GBDT):
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        n_classes = len(np.unique(y))
+        self.models = []
+
+        match self.task_type:
+            case "bin" | "multi":
+                self.model = CatBoost(params=self.model_params)
+                oof = np.zeros(shape=(len(y), n_classes), dtype=np.float32)
+
+        for idx_tr, idx_val in cv.split(X, y):  # type: ignore
+            X_tr, y_tr = X[idx_tr], y[idx_tr]
+            X_val, y_val = X[idx_val], y[idx_val]
+
+            clf_train = Pool(X_tr, y_tr)
+            clf_val = Pool(X_val, y_val)
+            self.model.fit(clf_train, eval_set=[clf_val])
+
+            oof[idx_val] = (
+                self.model.predict(X_val, prediction_type="Probability") if self.task_type in ("bin", "multi") else self.model.predict(X_val)
+            )
+            self.models.append(self.model)
+        return self.models, oof
+
+
+"""
+lgb_wrapper = LGB(
+    gbdt_type="lgb",
+    task_type="bin",
+    model_params=cfg.lgb.model_params,
+    train_params=cfg.lgb.train_params,
+    cv=cv,
+    callbacks=[
+        lgb.early_stopping(stopping_rounds=50, verbose=True),
+        lgb.log_evaluation(50),
+    ],
+)
+models, oof = lgb_wrapper.fit(X_train, y_train)
+"""
